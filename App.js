@@ -7,6 +7,8 @@ import React, {
   useState,
 } from 'react';
 import {
+  Animated,
+  Image,
   PanResponder,
   SafeAreaView,
   Text,
@@ -15,12 +17,17 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
+const AnimatedImage = Animated.createAnimatedComponent(Image);
+
 const LANES = 3;
 const BASE_SPEED = 3.2;
 const OBSTACLE_SIZE = 70;
 const SNOWMAN_SIZE = 90;
 const JUMP_DURATION = 900; // milliseconds
 const JUMP_HEIGHT = 120;
+
+const snowmanSprite = require('./assets/snowman.png');
+const iceSprite = require('./assets/ice.png');
 
 const computeJumpOffset = (remaining) => {
   if (remaining <= 0) {
@@ -53,6 +60,7 @@ export default function App() {
   const jumpingRef = useRef(false);
   const scoreRef = useRef(score);
   const spawnTimerRef = useRef(0);
+  const runCycle = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     playerLaneRef.current = playerLane;
@@ -67,6 +75,31 @@ export default function App() {
   useEffect(() => {
     scoreRef.current = score;
   }, [score]);
+
+  useEffect(() => {
+    if (isGameOver) {
+      runCycle.stopAnimation(() => runCycle.setValue(0));
+      return undefined;
+    }
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(runCycle, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(runCycle, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    loop.start();
+    return () => loop.stop();
+  }, [isGameOver, runCycle]);
 
   const triggerJump = useCallback(() => {
     setJumpClock((prev) => (prev > 0 ? prev : JUMP_DURATION));
@@ -191,6 +224,14 @@ export default function App() {
   [moveLeft, moveRight, triggerJump]);
 
   const jumpOffset = useMemo(() => computeJumpOffset(jumpClock), [jumpClock]);
+  const runBob = useMemo(
+    () => runCycle.interpolate({ inputRange: [0, 1], outputRange: [0, -8] }),
+    [runCycle],
+  );
+  const runTilt = useMemo(
+    () => runCycle.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['-2deg', '2deg', '-2deg'] }),
+    [runCycle],
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -219,10 +260,11 @@ export default function App() {
         ))}
 
         {obstacles.map((obs) => (
-          <View
+          <Image
             key={obs.id}
+            source={iceSprite}
             style={[
-              styles.ice,
+              styles.iceSprite,
               {
                 width: OBSTACLE_SIZE,
                 height: OBSTACLE_SIZE,
@@ -230,35 +272,25 @@ export default function App() {
                 top: obs.y,
               },
             ]}
-          >
-            <Text style={styles.iceLabel}>ICE</Text>
-          </View>
+          />
         ))}
 
-        <View
+        <AnimatedImage
+          source={snowmanSprite}
           style={[
-            styles.snowman,
+            styles.snowmanSprite,
             {
-              width: SNOWMAN_SIZE,
-              height: SNOWMAN_SIZE,
-              left: lanePositions[playerLane] - SNOWMAN_SIZE / 2,
-              top: playerBaseline - SNOWMAN_SIZE - jumpOffset,
+              width: SNOWMAN_SIZE * 1.1,
+              height: SNOWMAN_SIZE * 1.4,
+              left: lanePositions[playerLane] - (SNOWMAN_SIZE * 1.1) / 2,
+              top: playerBaseline - SNOWMAN_SIZE * 1.4 - jumpOffset,
+              transform: [
+                { translateY: isGameOver ? 0 : runBob },
+                { rotate: isGameOver ? '0deg' : runTilt },
+              ],
             },
           ]}
-        >
-          <View style={styles.snowmanBody}>
-            <View style={styles.snowmanFace}>
-              <View style={styles.eye} />
-              <View style={styles.eye} />
-            </View>
-            <View style={styles.carrot} />
-            <View style={styles.buttons}>
-              <View style={styles.buttonDot} />
-              <View style={styles.buttonDot} />
-              <View style={styles.buttonDot} />
-            </View>
-          </View>
-        </View>
+        />
 
         {isGameOver && (
           <View style={styles.overlay}>
@@ -324,66 +356,13 @@ const styles = {
     width: 2,
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  snowman: {
+  snowmanSprite: {
     position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
+    resizeMode: 'contain',
   },
-  snowmanBody: {
-    backgroundColor: '#fefefe',
-    width: '100%',
-    height: '100%',
-    borderRadius: 45,
-    borderColor: '#b6d4f7',
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  snowmanFace: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    width: '60%',
-    marginBottom: 6,
-  },
-  eye: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#0b1f3a',
-  },
-  carrot: {
-    width: 30,
-    height: 6,
-    backgroundColor: '#ff8a00',
-    borderRadius: 3,
-    marginBottom: 8,
-  },
-  buttons: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  buttonDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#0b1f3a',
-  },
-  ice: {
+  iceSprite: {
     position: 'absolute',
-    backgroundColor: '#7dd3fc',
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: '#1d4ed8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-  },
-  iceLabel: {
-    color: '#01213a',
-    fontWeight: '800',
-    fontSize: 16,
+    resizeMode: 'contain',
   },
   overlay: {
     position: 'absolute',
