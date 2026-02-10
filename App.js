@@ -28,6 +28,7 @@ const JUMP_HEIGHT = 120;
 
 const snowmanSprite = require('./assets/snowman.png');
 const iceSprite = require('./assets/ice.png');
+const backgroundSprite = require('./assets/background.png');
 
 const computeJumpOffset = (remaining) => {
   if (remaining <= 0) {
@@ -246,6 +247,12 @@ export default function App() {
         style={[styles.playfield, { height: fieldHeight }]}
         {...panResponder.panHandlers}
       >
+        <Image
+          source={backgroundSprite}
+          style={styles.playfieldBackground}
+          resizeMode="cover"
+          pointerEvents="none"
+        />
         {Array.from({ length: LANES }, (_, idx) => (
           <View
             key={`lane-${idx}`}
@@ -294,6 +301,7 @@ export default function App() {
 
         {isGameOver && (
           <View style={styles.overlay}>
+            <Image source={iceSprite} style={styles.overlayIce} />
             <Text style={styles.overlayTitle}>Frozen!</Text>
             <Text style={styles.overlaySubtitle}>ICE caught you. Tap restart.</Text>
             <TouchableOpacity style={styles.primaryButton} onPress={resetGame}>
@@ -351,6 +359,13 @@ const styles = {
     overflow: 'hidden',
     marginBottom: 20,
   },
+  playfieldBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
   laneDivider: {
     position: 'absolute',
     width: 2,
@@ -374,6 +389,12 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  overlayIce: {
+    width: 140,
+    height: 140,
+    resizeMode: 'contain',
+    marginBottom: 12,
   },
   overlayTitle: {
     color: '#fefefe',
