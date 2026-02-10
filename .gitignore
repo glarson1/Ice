@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+
+# Expo / React Native caches
+.expo
+.expo-shared
+.expo2
+
+# Logs and debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Metro / bundler artifacts
+.expo-packager-cache
+.expo-developer-tools
+metro-cache/
+*.expo
+
+# Mac / IDE cruft
+.DS_Store
+.idea/
+.vscode/
